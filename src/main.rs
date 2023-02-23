@@ -4,8 +4,21 @@ use rodio::{Decoder, OutputStream, Sink};
 use rodio::source::Source;
 use rodio::dynamic_mixer::{self, DynamicMixer};
 
-fn main() {
-    // Get a output stream handle to the default physical sound device
+use std::{io, thread, time::Duration};
+use tui::{
+    backend::CrosstermBackend,
+    widgets::{Widget, Block, Borders},
+    layout::{Layout, Constraint, Direction},
+    Terminal
+};
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+
+fn main() -> Result<(), io::Error> {
+    
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     let sink = Sink::try_new(&stream_handle).unwrap();
@@ -23,18 +36,54 @@ fn main() {
     tx.add(nature_source);
     sink.append(rx);
 
-    // stream_handle.play_raw(nature_source.convert_samples());
+    // setup terminal
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
 
-    // TODO: Where is the sink??
+    terminal.draw(|f| {
+        let size = f.size();
+        let block = Block::default()
+            .title("Block")
+            .borders(Borders::ALL);
+        f.render_widget(block, size);
+    })?;
 
-
-    // static_sink.append(static_sound);
-    // stream_handle.play_raw(source.convert_samples());
-
-    // sink.sleep_until_end();
-    // static_sink.sleep_until_end();
-    // The sound plays in a separate audio thread,
-    // so we need to keep the main thread alive while it's playing.
+  
     sink.sleep_until_end();
-    // std::thread::sleep(std::time::Duration::from_secs(5));
+
+    // thread::sleep(Duration::from_millis(5000));
+
+    // restore terminal
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    Ok(())
 }
+
+// fn main() {
+
+//     // Get a output stream handle to the default physical sound device
+
+
+//     // stream_handle.play_raw(nature_source.convert_samples());
+
+//     // TODO: Where is the sink??
+
+
+//     // static_sink.append(static_sound);
+//     // stream_handle.play_raw(source.convert_samples());
+
+//     // sink.sleep_until_end();
+//     // static_sink.sleep_until_end();
+//     // The sound plays in a separate audio thread,
+//     // so we need to keep the main thread alive while it's playing.
+//     // std::thread::sleep(std::time::Duration::from_secs(5));
+// }

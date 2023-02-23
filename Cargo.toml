@@ -9,6 +9,8 @@ version = "0.1.0"
 
 [dependencies]
 rodio = "0.17.0"
+tui = "0.19"
+crossterm = "0.25"
 
 [[bin]]
 name = "nosiy-radio"
