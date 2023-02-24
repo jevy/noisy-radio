@@ -12,14 +12,34 @@ use tui::{
     layout::{Layout, Constraint, Direction},
     Terminal
 };
+use tui::widgets::{Paragraph};
+use tui::style::{Color, Modifier, Style};
+use tui::layout::{Alignment};
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use crossterm::event::Event::Key;
 
 struct Radio {
     tuned_channel: i8,
+}
+
+impl Radio {
+    fn new() -> Self {
+        Radio {
+            tuned_channel: 50,
+        }
+    }
+
+    pub fn tune_up(&mut self) {
+        self.tuned_channel += (1 as i8);
+    }
+
+    pub fn tune_down(&mut self) {
+        self.tuned_channel -= (1 as i8);
+    }
 }
 
 struct Channel {
@@ -57,14 +77,6 @@ fn main() -> Result<(), io::Error> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error> {
 
-    terminal.draw(|f| {
-        let size = f.size();
-        let block = Block::default()
-            .title("Block")
-            .borders(Borders::ALL);
-        f.render_widget(block, size);
-    })?;
-
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     let sink = Sink::try_new(&stream_handle).unwrap();
@@ -81,28 +93,44 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error>
     tx.add(static_source);
     tx.add(nature_source);
     sink.append(rx);
+
+    let mut radio = Radio::new();
   
-    sink.sleep_until_end();
+    loop {
 
-    return Ok(());
+        terminal.draw(|f| {
+            let size = f.size();
+            let freq_text = Paragraph::new(radio.tuned_channel.to_string())
+                .style(Style::default().fg(Color::Yellow))
+                .alignment(Alignment::Center);
+            f.render_widget(freq_text, size);
+        })?;
+
+        if let Key(key) = event::read()? {
+            match key.code {
+                KeyCode::Char('+') => {
+                    // println!("Tune up");
+                    radio.tune_up();
+                }
+                KeyCode::Char('-') => {
+                    radio.tune_down();
+                }
+                _ => {}
+            // println!("{:?}", event),
+            }
+        }
+
+        //     match key.code {
+        //         KeyCode::Char('+') => {
+        //             radio.tune_up();
+        //         }
+        //         KeyCode::Char('-') => {
+        //             // Decrease tuning
+        //         }
+        //         _ => {}
+        //     }
+        // }
+        // sink.sleep_until_end();
+    }
+
 }
-
-// fn main() {
-
-//     // Get a output stream handle to the default physical sound device
-
-
-//     // stream_handle.play_raw(nature_source.convert_samples());
-
-//     // TODO: Where is the sink??
-
-
-//     // static_sink.append(static_sound);
-//     // stream_handle.play_raw(source.convert_samples());
-
-//     // sink.sleep_until_end();
-//     // static_sink.sleep_until_end();
-//     // The sound plays in a separate audio thread,
-//     // so we need to keep the main thread alive while it's playing.
-//     // std::thread::sleep(std::time::Duration::from_secs(5));
-// }
