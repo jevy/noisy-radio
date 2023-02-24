@@ -1,10 +1,5 @@
-use std::fs::File;
-use std::io::BufReader;
-use rodio::{Decoder, OutputStream, Sink};
-use rodio::source::Source;
-use rodio::dynamic_mixer::{self, DynamicMixer};
+use std::io;
 
-use std::{io, thread, time::Duration};
 use tui::{
     backend::Backend,
     backend::CrosstermBackend,
@@ -22,29 +17,8 @@ use crossterm::{
 };
 use crossterm::event::Event::Key;
 
-struct Radio {
-    tuned_channel: i8,
-}
+mod radio;
 
-impl Radio {
-    fn new() -> Self {
-        Radio {
-            tuned_channel: 50,
-        }
-    }
-
-    pub fn tune_up(&mut self) {
-        self.tuned_channel += (1 as i8);
-    }
-
-    pub fn tune_down(&mut self) {
-        self.tuned_channel -= (1 as i8);
-    }
-}
-
-struct Channel {
-    freq: i8,
-}
 
 fn main() -> Result<(), io::Error> {
     
@@ -77,27 +51,25 @@ fn main() -> Result<(), io::Error> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error> {
 
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-
-    let nature_sink = Sink::try_new(&stream_handle).unwrap();
-    let nature_file = BufReader::new(File::open("src/nature.mp3").unwrap());
-    let nature_source = Decoder::new(nature_file).unwrap();
-    nature_sink.append(nature_source);
-
-    let static_sink = Sink::try_new(&stream_handle).unwrap();
-    let static_file = BufReader::new(File::open("src/radio-static.mp3").unwrap());
-    let static_source = Decoder::new(static_file).unwrap();
-    static_sink.append(static_source);
-
-    let mut radio = Radio::new();
+    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+    let mut radio = radio::Radio::new();
+    let rc1 = radio::RadioChannel::new("src/nature.mp3".to_owned(), 25, &stream_handle);
+    radio.add_radio_channel(rc1);
+    let rc2 = radio::RadioChannel::new("src/radio-static.mp3".to_owned(), 25, &stream_handle);
+    radio.add_radio_channel(rc2);
   
-    loop {
+    // let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    // let sink = Sink::try_new(&stream_handle).unwrap();
+    // let filename = "src/nature.mp3";
+    // let file = BufReader::new(File::open(filename).unwrap());
+    // let file_source = Decoder::new(file).unwrap();
+    // sink.append(file_source);
 
-        static_sink.set_volume((radio.tuned_channel as f32) / 100.0);
+    loop {
 
         terminal.draw(|f| {
             let size = f.size();
-            let freq_text = Paragraph::new(radio.tuned_channel.to_string())
+            let freq_text = Paragraph::new(radio.current_freq.to_string())
                 .style(Style::default().fg(Color::Yellow))
                 .alignment(Alignment::Center);
             f.render_widget(freq_text, size);
