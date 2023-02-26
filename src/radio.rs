@@ -13,28 +13,51 @@ pub struct Radio {
 }
 
 impl Radio {
+    const CHANNEL_BANDWIDTH: f32 = 15.0;
+
     pub fn new() -> Self {
         Radio {
             current_freq: 50,
-            channels: Vec::new()
+            channels: Vec::<RadioChannel>::new()
         }
     }
 
     pub fn tune_up(&mut self) {
         self.current_freq += (1 as i8);
+        self.adjust_volumes();
     }
 
     pub fn tune_down(&mut self) {
         self.current_freq -= (1 as i8);
+        self.adjust_volumes();
     }
 
     pub fn add_radio_channel(&mut self, rc: RadioChannel) {
         self.channels.push(rc);
+        self.adjust_volumes();
+    }
+
+    fn adjust_volumes(&mut self) {
+        for channel in &mut self.channels {
+            if channel.center_freq != 0 {
+                let delta_from_center = (self.current_freq - channel.center_freq).abs() as f32;
+                // println!("{}", delta_from_center);
+                if delta_from_center > Radio::CHANNEL_BANDWIDTH {
+                    channel.sink.set_volume(0.0);
+                } else {
+                    let volume = ((Radio::CHANNEL_BANDWIDTH - delta_from_center) / Radio::CHANNEL_BANDWIDTH) as f32;
+                    println!("{}", volume as f32);
+                    channel.sink.set_volume((volume) as f32);
+                }
+            } else {
+            };
+        }
+
     }
 }
 
 pub struct RadioChannel {
-    center_freq: i8,
+    center_freq: i8, // cf of 0 means everywhere
     sink: rodio::Sink,
 }
 
