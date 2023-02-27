@@ -469,6 +469,7 @@ name = "noisy-radio2"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "glob",
  "rodio",
  "tui",
 ]

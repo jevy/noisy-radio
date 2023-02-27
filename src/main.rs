@@ -63,7 +63,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error>
 
 
     let mut radio = radio::Radio::new(stream_handle);
-    radio.add_radio_channel("src/nature.mp3".to_owned(), 25);
+    radio.add_radio_channel_from_directory("src/channels/this-never-happened/*".to_string().to_owned(), 25);
+    radio.add_radio_channel_from_directory("src/channels/synthwave/*Brother*".to_string().to_owned(), 75);
     radio.add_static("src/radio-static.mp3".to_owned());
   
     // let (_stream, stream_handle) = OutputStream::try_default().unwrap();

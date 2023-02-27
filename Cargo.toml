@@ -11,6 +11,7 @@ version = "0.1.0"
 rodio = "0.17.0"
 tui = "0.19"
 crossterm = "0.25"
+glob = "0.3.1"
 
 [[bin]]
 name = "nosiy-radio"
