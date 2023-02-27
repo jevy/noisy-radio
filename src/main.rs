@@ -53,12 +53,18 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error>
 
     // TODO: Adjust volumes iterating over and modifying the channels (mutable iterators?)
     // TODO: stream_handle moved into Radio.
-    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
-    let mut radio = radio::Radio::new();
-    let rc1 = radio::RadioChannel::new("src/nature.mp3".to_owned(), 25, &stream_handle);
-    radio.add_radio_channel(rc1);
-    let rc2 = radio::RadioChannel::new("src/radio-static.mp3".to_owned(), 0, &stream_handle);
-    radio.add_radio_channel(rc2);
+    let (_stream, stream_handle) = match rodio::OutputStream::try_default() {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("Couldn't open audio, with error {e}");
+            std::process::exit(1);
+        }
+    };
+
+
+    let mut radio = radio::Radio::new(stream_handle);
+    radio.add_radio_channel("src/nature.mp3".to_owned(), 25);
+    radio.add_radio_channel("src/radio-static.mp3".to_owned(), 0);
   
     // let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     // let sink = Sink::try_new(&stream_handle).unwrap();
@@ -69,13 +75,13 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error>
 
     loop {
 
-        // terminal.draw(|f| {
-        //     let size = f.size();
-        //     let freq_text = Paragraph::new(radio.current_freq.to_string())
-        //         .style(Style::default().fg(Color::Yellow))
-        //         .alignment(Alignment::Center);
-        //     f.render_widget(freq_text, size);
-        // });
+        terminal.draw(|f| {
+            let size = f.size();
+            let freq_text = Paragraph::new(radio.current_freq.to_string())
+                .style(Style::default().fg(Color::Yellow))
+                .alignment(Alignment::Center);
+            f.render_widget(freq_text, size);
+        });
 
         if let Key(key) = event::read()? {
             match key.code {

@@ -3,22 +3,24 @@ use std::fs::File;
 use std::io::BufReader;
 use std::{io, thread, time::Duration};
 
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream, Sink, OutputStreamHandle};
 use rodio::source::Source;
 use rodio::dynamic_mixer::{self, DynamicMixer};
 
 pub struct Radio {
     pub current_freq: i8,
-    channels: Vec<RadioChannel>
+    channels: Vec<RadioChannel>,
+    stream_handle: OutputStreamHandle,
 }
 
 impl Radio {
     const CHANNEL_BANDWIDTH: f32 = 15.0;
 
-    pub fn new() -> Self {
+    pub fn new(stream_handle: OutputStreamHandle) -> Self {
         Radio {
             current_freq: 50,
-            channels: Vec::<RadioChannel>::new()
+            channels: Vec::<RadioChannel>::new(),
+            stream_handle: stream_handle,
         }
     }
 
@@ -32,7 +34,8 @@ impl Radio {
         self.adjust_volumes();
     }
 
-    pub fn add_radio_channel(&mut self, rc: RadioChannel) {
+    pub fn add_radio_channel(&mut self, filename: String, center_freq: i8) {
+        let rc = RadioChannel::new(filename, center_freq, &self.stream_handle);
         self.channels.push(rc);
         self.adjust_volumes();
     }
@@ -41,12 +44,10 @@ impl Radio {
         for channel in &mut self.channels {
             if channel.center_freq != 0 {
                 let delta_from_center = (self.current_freq - channel.center_freq).abs() as f32;
-                // println!("{}", delta_from_center);
                 if delta_from_center > Radio::CHANNEL_BANDWIDTH {
                     channel.sink.set_volume(0.0);
                 } else {
                     let volume = ((Radio::CHANNEL_BANDWIDTH - delta_from_center) / Radio::CHANNEL_BANDWIDTH) as f32;
-                    println!("{}", volume as f32);
                     channel.sink.set_volume((volume) as f32);
                 }
             } else {
@@ -56,13 +57,13 @@ impl Radio {
     }
 }
 
-pub struct RadioChannel {
+struct RadioChannel {
     center_freq: i8, // cf of 0 means everywhere
     sink: rodio::Sink,
 }
 
 impl RadioChannel {
-    pub fn new(filename: String, cf: i8, stream_handle: &rodio::OutputStreamHandle) -> Self {
+    fn new(filename: String, cf: i8, stream_handle: &rodio::OutputStreamHandle) -> Self {
 
         let rc = RadioChannel {
             center_freq: cf,
