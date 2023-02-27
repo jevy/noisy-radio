@@ -11,15 +11,19 @@ pub struct Radio {
     pub current_freq: i8,
     channels: Vec<RadioChannel>,
     stream_handle: OutputStreamHandle,
+    static_sink: Sink,
 }
 
 impl Radio {
     const CHANNEL_BANDWIDTH: f32 = 15.0;
 
     pub fn new(stream_handle: OutputStreamHandle) -> Self {
+        
+        let static_sink = rodio::Sink::try_new(&stream_handle).unwrap();
         Radio {
             current_freq: 50,
             channels: Vec::<RadioChannel>::new(),
+            static_sink: static_sink,
             stream_handle: stream_handle,
         }
     }
@@ -38,6 +42,12 @@ impl Radio {
         let rc = RadioChannel::new(filename, center_freq, &self.stream_handle);
         self.channels.push(rc);
         self.adjust_volumes();
+    }
+
+    pub fn add_static(&mut self, filename: String) {
+        let file = BufReader::new(File::open(filename).unwrap());
+        let file_source = Decoder::new_looped(file).unwrap();
+        &self.static_sink.append(file_source);
     }
 
     fn adjust_volumes(&mut self) {
