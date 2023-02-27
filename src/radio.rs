@@ -56,9 +56,10 @@ impl Radio {
                 let delta_from_center = (self.current_freq - channel.center_freq).abs() as f32;
                 if delta_from_center > Radio::CHANNEL_BANDWIDTH {
                     channel.sink.set_volume(0.0);
+                    &self.static_sink.set_volume(1.0);
                 } else {
-                    let volume = ((Radio::CHANNEL_BANDWIDTH - delta_from_center) / Radio::CHANNEL_BANDWIDTH) as f32;
-                    channel.sink.set_volume((volume) as f32);
+                    channel.sink.set_volume(((Radio::CHANNEL_BANDWIDTH - delta_from_center) / Radio::CHANNEL_BANDWIDTH) as f32);
+                    &self.static_sink.set_volume(1.0-((Radio::CHANNEL_BANDWIDTH - delta_from_center) / Radio::CHANNEL_BANDWIDTH) as f32);
                 }
             } else {
             };
