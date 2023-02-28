@@ -17,3 +17,6 @@ rand = "0.8.5"
 [[bin]]
 name = "nosiy-radio"
 path = "src/main.rs"
+
+[profile.dev.package."*"]
+opt-level = 3
