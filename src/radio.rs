@@ -1,13 +1,17 @@
 
 use std::fs::File;
 use std::io::BufReader;
+use std::path;
 use std::{io, thread, time::Duration};
+use std::collections::VecDeque;
 
 use rodio::{Decoder, OutputStream, Sink, OutputStreamHandle};
 use rodio::source::Source;
 use rodio::dynamic_mixer::{self, DynamicMixer};
 
 use glob::glob;
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 pub struct Radio {
     pub current_freq: i8,
@@ -107,17 +111,27 @@ impl RadioChannel {
             sink: rodio::Sink::try_new(&stream_handle).unwrap(),
         };
 
-        // let file = std::io::BufReader::new(std::fs::File::open(filename).unwrap());
-        // let file_source = rodio::Decoder::new(file).unwrap();
-        // rc.sink.append(file_source);
-        // return rc;
+        // Basic idea: We want to start at a random place, in a random song.
+        // So 1. Randomize the list of files to pull from. 2. Skip to a random place in the first song
 
-        for entry in glob(&pattern).unwrap() {
-            if let Ok(path) = entry {
-                let file_reader = BufReader::new(File::open(path).unwrap());
-                let file_source = Decoder::new(file_reader).unwrap();
+        // https://users.rust-lang.org/t/sorting-glob-result/16461/3
+        let mut files_matching_glob: Result<Vec<_>, _> = glob(&pattern).expect("Glob failed").collect();
+        
+        // https://play.rust-lang.org/?version=stable&mode=debug&edition=2018
+        let mut all_files_in_dir = files_matching_glob.unwrap();
+        all_files_in_dir.shuffle(&mut thread_rng());
+
+        for (i, entry) in all_files_in_dir.iter().enumerate() {
+            let file_reader = BufReader::new(File::open(entry).unwrap());
+            let mut file_source = Decoder::new(file_reader).unwrap();
+
+            if i == 0 {
+                // Advance the first song by half
+                rc.sink.append(file_source.skip_duration(Duration::new(60, 0)));
+            } else {
                 rc.sink.append(file_source);
             }
+
         };
         rc
     }

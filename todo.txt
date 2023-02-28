@@ -1,0 +1,2 @@
+- [x] Start channels playing at random places. Use "source.skip_duration(30s) for the first song"
+- [ ] Loop the songs 
